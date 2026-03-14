@@ -1,0 +1,7 @@
+yfinance>=0.2.36
+pandas>=2.1.4
+numpy>=1.26.4
+tqdm>=4.66.1
+schedule>=1.2.1
+lxml>=5.1.0
+html5lib>=1.1

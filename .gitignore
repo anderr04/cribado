@@ -1,0 +1,11 @@
+__pycache__/
+*.db
+portfolio.db
+*.log
+*.csv
+!international_list.csv
+!companylist.csv
+.env
+.venv/
+env/
+venv/
