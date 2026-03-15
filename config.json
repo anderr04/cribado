@@ -2,7 +2,7 @@
     "initial_balance": 1000.0,
     "position_size_pct": 0.05,
     "run_interval_days": 1,
-    "run_time": "16:00",
+    "run_time": "23:00",
     "csv_file": "companylist.csv",
     "db_file": "portfolio.db"
 }
