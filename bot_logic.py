@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import gc
 import pandas as pd
 from datetime import datetime
 from portfolio import Portfolio
@@ -77,4 +78,8 @@ class TradingBot:
         print(f"  Valor Total Est: ${summary['total_estimated']:,.2f}")
         print(f"  Posiciones Abiertas: {summary['num_positions']}")
         print(f"{'='*60}\n")
+        
+        # Forzar recolección de basura para liberar la memoria RAM a la máquina (evita OOM)
+        df_resultados = None
+        gc.collect()
 
