@@ -96,6 +96,11 @@ class Portfolio:
         2. Añade/actualiza a posiciones
         3. Registra el trade
         """
+        # Rechazar órdenes demasiado pequeñas (evita compras de $0 cuando no hay cash)
+        if total_investment < 1.0:
+            print(f"  [RECHAZADA] Importe de compra insuficiente (${total_investment:.2f}) para {ticker}. Sin cash disponible.")
+            return False
+
         cash = self.get_cash()
         if cash < total_investment:
             print(f"  [RECHAZADA] No hay suficiente cash (${cash:.2f}) para comprar ${total_investment:.2f} de {ticker}")
