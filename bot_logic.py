@@ -78,7 +78,13 @@ class TradingBot:
 
         print(f"  Valor en cartera (mercado actual): ${total_portfolio_value_real:,.2f}")
         print(f"  Cash disponible: ${cash_actual:,.2f}")
-        print(f"  Gangas detectadas hoy: {num_gangas} | Tamaño de posición: ${cash_actual / (num_gangas + 10):,.2f}")
+
+        # Position Sizing uniforme: se calcula UNA VEZ antes del bucle
+        # Buffer = 5: deja reserva para ~5 oportunidades futuras (~15% del cash)
+        # Con 23 gangas y $1000: $1000 / (23+5) = $35.71 por empresa
+        BUFFER_POSICIONES = 5
+        amount_to_invest = cash_actual / (num_gangas + BUFFER_POSICIONES) if num_gangas > 0 else 0
+        print(f"  Gangas detectadas hoy: {num_gangas} | Posicion uniforme: ${amount_to_invest:,.2f} (buffer={BUFFER_POSICIONES})")
 
         for index, row in df_resultados.iterrows():
             ticker = str(row['Ticker']).strip()
@@ -103,11 +109,7 @@ class TradingBot:
             # --- Lógica de COMPRA ---
             # Compramos si no lo tenemos y la criba dicta COMPRA
             elif not in_portfolio and recomendacion == "COMPRA - Ganga Generacional":
-                # Sizing Dinámico: cash_real / (gangas_de_hoy + 10 de buffer)
-                # Usamos solo el cash disponible, NO el valor no realizado de las posiciones
-                cash_actual = self.portfolio.get_cash()
-                amount_to_invest = cash_actual / (num_gangas + 10)
-
+                # amount_to_invest ya calculado uniformemente antes del bucle
                 print(f"  [ALERTA] {ticker} es Ganga Generacional. Evaluando COMPRA.")
                 self.portfolio.buy(ticker, precio_float, amount_to_invest)
 
