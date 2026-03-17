@@ -44,6 +44,9 @@ class TradingBot:
         print(f"\n>> Paso 2: Interpretando resultados desde CSV ({len(df_resultados)} filas) para Paper Trading...")
         current_portfolio_dict = self.portfolio.get_positions()
         
+        # Calcular el total de gangas detectadas hoy para el Position Sizing dinámico
+        num_gangas = len(df_resultados[df_resultados['Recomendacion'] == 'COMPRA - Ganga Generacional'])
+        
         for index, row in df_resultados.iterrows():
             ticker = str(row['Ticker']).strip()
             recomendacion = str(row.get('Recomendacion', ''))
@@ -64,8 +67,10 @@ class TradingBot:
             # Compramos si no lo tenemos y la criba dicta COMPRA
             elif not in_portfolio and recomendacion == "COMPRA - Ganga Generacional":
                 total_portfolio_value = self.portfolio.get_portfolio_summary()["total_estimated"]
-                pct = self.config.get("position_size_pct", 0.05)
-                amount_to_invest = total_portfolio_value * pct
+                
+                # Sizing Dinámico: (1 / (num_gangas + 10)) * capital
+                # Esto asegura que haya hueco para las de hoy + 10 posiciones de margen futuro
+                amount_to_invest = total_portfolio_value / (num_gangas + 10)
                 
                 print(f"  [ALERTA] {ticker} cumple criterios de Ganga Generacional. Evaluando COMPRA.")
                 self.portfolio.buy(ticker, float(precio_actual), amount_to_invest)
