@@ -10,7 +10,7 @@ def handle_sigterm(signum, frame):
     print("\n[SISTEMA] Recibida senal de apagado (SIGTERM/SIGINT). Cerrando bot de forma segura...")
     sys.exit(0)
 
-# Manejar senales para detener Docker con gracia
+# Capturar senales de cierre para apagado seguro (tmux, nohup, kill)
 signal.signal(signal.SIGINT, handle_sigterm)
 signal.signal(signal.SIGTERM, handle_sigterm)
 
@@ -20,7 +20,8 @@ def main():
     
     print("\n[SISTEMA] Inicializando Paper Trading Bot...")
     
-    # Ejecutar una vez al arrancar el contenedor
+    # Ejecutar una iteracion al arrancar: si el CSV es reciente (< 23h) se saltara la criba.
+    # Si no existe o es antiguo, lanzara la criba completa ahora.
     bot.run_iteration()
     
     # Cargar configuracion para el programador
