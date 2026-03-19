@@ -25,17 +25,12 @@ def main():
     bot.run_iteration()
     
     # Cargar configuracion para el programador
-    run_interval = 1
-    run_time = "16:00"
-    if os.path.exists(config_path):
-        try:
-            with open(config_path, "r") as f:
-                cfg = json.load(f)
-                run_interval = cfg.get("run_interval_days", 1)
-                run_time = cfg.get("run_time", "16:00")
-        except Exception as e:
-            print(f"[ERROR] No se pudo leer config.json completo: {e}")
-            
+    run_interval = bot.config.get("run_interval_days", 1)  # Por defecto cada 1 dia
+    run_time = bot.config.get("run_time", "23:00")         # Por defecto a las 23:00
+    
+    # Programar la iteracion principal (FORZANDO criba independientemente de la edad del CSV local)
+    schedule.every(run_interval).days.at(run_time).do(lambda: bot.run_iteration(force_screening=True))
+    
     print(f"\n[SCHEDULER] Configurando ejecucion cada {run_interval} dia(s) a las {run_time}.")
     
     # Configurar horario (schedule)

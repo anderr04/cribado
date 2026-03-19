@@ -23,7 +23,7 @@ class TradingBot:
         edad_segundos = time.time() - os.path.getmtime(CSV_SALIDA)
         return edad_segundos < (max_horas * 3600)
 
-    def run_iteration(self):
+    def run_iteration(self, force_screening=False):
         """Bloque maestro que se ejecuta en cada intervalo."""
         print(f"\n{'='*60}")
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] INICIANDO FLUJO DEL BOT DE TRADING")
@@ -33,7 +33,7 @@ class TradingBot:
         current_positions = list(self.portfolio.get_positions().keys())
         
         # 2. Ejecutar la criba o cargar desde CSV si ya es reciente (evita escaneos innecesarios al reiniciar)
-        if self._csv_es_reciente():
+        if not force_screening and self._csv_es_reciente():
             print(f">> CSV de salida reciente encontrado ({CSV_SALIDA}). Saltando criba y cargando desde disco.")
             try:
                 df_resultados = pd.read_csv(CSV_SALIDA)
