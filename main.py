@@ -1,7 +1,5 @@
 import schedule
 import time
-import json
-import os
 import signal
 import sys
 from bot_logic import TradingBot
@@ -20,27 +18,24 @@ def main():
     
     print("\n[SISTEMA] Inicializando Paper Trading Bot...")
     
-    # Ejecutar una iteracion al arrancar: si el CSV es reciente (< 23h) se saltara la criba.
-    # Si no existe o es antiguo, lanzara la criba completa ahora.
+    # Ejecutar una iteracion al arrancar.
+    # Si el CSV es reciente (< 23h, e.g. tras un reinicio de emergencia), salta la criba.
+    # Si no existe o es antiguo, lanza la criba completa ahora.
     bot.run_iteration()
-    
+
     # Cargar configuracion para el programador
     run_interval = bot.config.get("run_interval_days", 1)  # Por defecto cada 1 dia
-    run_time = bot.config.get("run_time", "23:00")         # Por defecto a las 23:00
-    
-    # Programar la iteracion principal (FORZANDO criba independientemente de la edad del CSV local)
-    schedule.every(run_interval).days.at(run_time).do(lambda: bot.run_iteration(force_screening=True))
-    
+    run_time     = bot.config.get("run_time", "23:00")     # Por defecto a las 23:00
+
+    # Programar la iteracion diaria FORZANDO siempre la criba en el horario planificado.
+    # force_screening=True garantiza que no se salta el scan aunque el CSV sea reciente.
+    schedule.every(run_interval).days.at(run_time).do(
+        lambda: bot.run_iteration(force_screening=True)
+    )
+
     print(f"\n[SCHEDULER] Configurando ejecucion cada {run_interval} dia(s) a las {run_time}.")
-    
-    # Configurar horario (schedule)
-    if run_interval == 1:
-        schedule.every().day.at(run_time).do(bot.run_iteration)
-    else:
-        schedule.every(run_interval).days.at(run_time).do(bot.run_iteration)
-        
     print("[SCHEDULER] Bot en ejecucion 24/7. Esperando siguientes trabajos...\n")
-    
+
     # Bucle infinito 24/7
     while True:
         schedule.run_pending()
