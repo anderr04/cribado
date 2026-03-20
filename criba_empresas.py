@@ -581,27 +581,46 @@ def calcular_rsi(precios, periodo=14):
 
 def filtro_tecnico_anti_cuchillo(ticker_str):
     """
-    Filtro Anti-Cuchillo según pág 2 del PDF:
+    Filtro Anti-Cuchillo (pág 2 del PDF):
     - Precio > SMA(50)
     - RSI(14) > 40
+
+    NOTA: precio_actual se obtiene SIEMPRE de los datos históricos descargados
+    (NO de info['regularMarketPrice']) para garantizar coherencia de escala.
+    Corrección automática de GBp -> GBP para acciones del LSE (.L).
     """
     try:
         hist = yf.download(ticker_str, period="6mo", interval="1d",
                           progress=False, auto_adjust=True)
-        
+
         if hist.empty or len(hist) < 50:
             return {"precio": None, "sma50": None, "rsi14": None, "cumple_tecnico": False}
-        
+
         precios_close = hist["Close"].squeeze()
+
+        # Correción GBp -> GBP: Yahoo Finance devuelve acciones de la LSE (.L) en peniques.
+        # Detectamos la inconsistencia comparando con regularMarketPrice de info.
+        # Si el precio histórico es ~100x el precio de info, dividimos por 100.
+        if ticker_str.upper().endswith('.L'):
+            try:
+                info_price = yf.Ticker(ticker_str).fast_info.get('lastPrice', None)
+                hist_price_last = float(precios_close.iloc[-1])
+                if info_price and info_price > 0:
+                    ratio = hist_price_last / info_price
+                    if ratio > 50:  # El hist está en peniques y el info en libras
+                        precios_close = precios_close / 100
+            except Exception:
+                pass
+
         precio_actual = float(precios_close.iloc[-1])
         sma50 = calcular_sma(precios_close, 50)
         rsi14 = calcular_rsi(precios_close, 14)
-        
+
         cumple = (
             (sma50 is not None and precio_actual > float(sma50)) and
             (rsi14 is not None and float(rsi14) > 40)
         )
-        
+
         return {
             "precio": round(precio_actual, 2),
             "sma50": round(float(sma50), 2) if sma50 is not None else None,
@@ -629,22 +648,28 @@ def analizar_ticker(ticker_str):
     Manejo de errores silencioso: retorna None si falla.
     """
     resultado = {"Ticker": ticker_str}
-    
+
     try:
         stock = yf.Ticker(ticker_str)
         info = stock.info
-        
+
         # Validación rápida: si no hay datos básicos, saltar
         if not info or not info.get("regularMarketPrice"):
             return None
-        
+
+        # --- FILTRO DE LIQUIDEZ MÍNIMA ---
+        # Umbral conservador: 10.000 acciones/día (ejecutable en una ventana de 24h).
+        # Permite small-caps y empresas poco conocidas pero descarta las completamente iliquidas.
+        avg_vol = info.get("averageVolume", 0) or 0
+        if avg_vol < 10_000:
+            return None
+
         financials = stock.financials
-        balance = stock.balance_sheet
-        cashflow = stock.cashflow
-        
+        balance    = stock.balance_sheet
+        cashflow   = stock.cashflow
+
         if financials.empty or balance.empty:
             return None
-        
         # --- PASO 1: Filtros de Calidad (pág 1) ---
         calidad = filtros_calidad(info, financials, balance, cashflow)
         resultado["ROIC"] = calidad["roic"]
