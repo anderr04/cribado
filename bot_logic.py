@@ -3,6 +3,7 @@ import gc
 import json
 import time
 import pandas as pd
+import yfinance as yf
 from datetime import datetime, date
 from portfolio import Portfolio
 from criba_empresas import ejecutar_criba, CSV_SALIDA
@@ -97,22 +98,44 @@ class TradingBot:
         )
         total_portfolio_value_real = cash_actual + valor_posiciones_mercado
 
-        # Position Sizing uniforme, calculado UNA VEZ antes del bucle
-        amount_to_invest = cash_actual / (num_gangas + BUFFER_POSICIONES) if num_gangas > 0 else 0
+        # Position Sizing basado en porcentaje fijo del valor total del portafolio (ej. 4%)
+        # Esto permite que las operaciones se ajusten al crecimiento de la equidad y no al cash sobrante
+        position_pct = self.config.get("position_size_pct", 0.04)
+        amount_to_invest = total_portfolio_value_real * position_pct
 
         print(f"  Valor cartera (precio mercado): ${total_portfolio_value_real:,.2f}")
         print(f"  Cash disponible:                ${cash_actual:,.2f}")
-        print(f"  Gangas detectadas hoy: {num_gangas} | Posicion uniforme: ${amount_to_invest:,.2f} (buffer={BUFFER_POSICIONES})")
+        print(f"  Gangas detectadas hoy: {num_gangas} | Posicion objetivo ({position_pct*100}%): ${amount_to_invest:,.2f}")
 
         # ============================================================
         # PASO A: Gestión de riesgo sobre posiciones existentes
-        # (Stop-Loss, WATCHLIST timeout) — ANTES del bucle de compras
+        # (Stock Splits, Stop-Loss, WATCHLIST timeout) — ANTES del bucle de compras
         # ============================================================
         posiciones_actuales = self.portfolio.get_positions()
         for ticker, pos in posiciones_actuales.items():
             precio_actual = precio_mercado.get(ticker)
             if precio_actual is None:
                 continue
+
+            # Revisión de Stock Splits usando yfinance para evitar falsos Stop-Losses
+            try:
+                stock_data = yf.Ticker(ticker)
+                # Conseguimos los splits recientes
+                splits = stock_data.splits
+                if not splits.empty:
+                    # Verifica si hubo splits desde la fecha de compra
+                    purchase_date = pos.get('purchase_date', '2000-01-01')
+                    splits_since = splits[splits.index >= pd.to_datetime(purchase_date).tz_localize(splits.index.tz)]
+                    if not splits_since.empty:
+                        # Si hay varios, multiplicamos todo el ratio
+                        total_ratio = splits_since.prod()
+                        if total_ratio > 0 and total_ratio != 1.0:
+                            # Actualizamos en portfolio (la base de datos/json guardará los nuevos shares/avg_price)
+                            self.portfolio.adjust_for_split(ticker, float(total_ratio))
+                            # Refrescamos la variable pos para que el posterior Stop-Loss la use bien
+                            pos = self.portfolio.get_positions()[ticker]
+            except Exception as e:
+                print(f"  [AVISO] No se pudieron chequear splits para {ticker}: {e}")
 
             avg_price   = pos['average_price']
             pct_cambio  = ((precio_actual - avg_price) / avg_price * 100) if avg_price > 0 else 0

@@ -33,8 +33,8 @@ except ImportError:
 # CONFIGURACIÓN GLOBAL
 # ============================================================================
 DELAY_ENTRE_PETICIONES = 0.5        # Segundos entre cada ticker (anti-bloqueo)
-CSV_LOCAL = "companylist.csv"       # Archivo local opcional (NASDAQ/NYSE)
-CSV_SALIDA = "gangas_generacionales_v2.csv"
+CSV_LOCAL = "data/companylist.csv"       # Archivo local opcional (NASDAQ/NYSE)
+CSV_SALIDA = "data/gangas_generacionales_v2.csv"
 MAX_REINTENTOS = 2                  # Reintentos por ticker si falla la conexión
 
 # ============================================================================

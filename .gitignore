@@ -9,3 +9,6 @@ portfolio.db
 .venv/
 env/
 venv/
+
+*.json
+!config.json
